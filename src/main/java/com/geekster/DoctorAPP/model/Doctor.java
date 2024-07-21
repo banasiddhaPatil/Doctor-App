@@ -30,6 +30,47 @@ public class Doctor {
     private Specialization specialization;
     @Pattern(regexp = "^[0-9]{10}$")
     private String doctorContactNumber;
+
+    public Long getDoctorId() {
+        return doctorId;
+    }
+
+    public void setDoctorId(Long doctorId) {
+        this.doctorId = doctorId;
+    }
+
+    public String getDoctorName() {
+        return doctorName;
+    }
+
+    public void setDoctorName(String doctorName) {
+        this.doctorName = doctorName;
+    }
+
+    public Specialization getSpecialization() {
+        return specialization;
+    }
+
+    public void setSpecialization(Specialization specialization) {
+        this.specialization = specialization;
+    }
+
+    public String getDoctorContactNumber() {
+        return doctorContactNumber;
+    }
+
+    public void setDoctorContactNumber(String doctorContactNumber) {
+        this.doctorContactNumber = doctorContactNumber;
+    }
+
+    public Qualification getQualification() {
+        return qualification;
+    }
+
+    public void setQualification(Qualification qualification) {
+        this.qualification = qualification;
+    }
+
     @Enumerated(EnumType.STRING)
     private Qualification qualification;
     @Min(value = 200)
@@ -38,4 +79,8 @@ public class Doctor {
 
     @OneToMany(mappedBy = "doctor")
     List<Appointment> appointments;
+
+    public String getDocName() {
+        return this.doctorName;
+    }
 }

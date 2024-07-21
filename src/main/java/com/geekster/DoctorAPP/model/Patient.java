@@ -36,4 +36,7 @@ public class Patient {
 
     @OneToOne(mappedBy = "patient")
     Appointment appointment;
+
+    public void setAppointments(Object o) {
+    }
 }

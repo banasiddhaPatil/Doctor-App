@@ -1,175 +1,138 @@
 package com.geekster.DoctorAPP.service;
 
 
-import com.geekster.DoctorAPP.model.Appointment;
 import com.geekster.DoctorAPP.model.AuthenticationToken;
 import com.geekster.DoctorAPP.model.Patient;
-import com.geekster.DoctorAPP.model.dto.SignInInput;
-import com.geekster.DoctorAPP.model.dto.SignUpOutput;
-import com.geekster.DoctorAPP.repository.IAuthTokenRepo;
-import com.geekster.DoctorAPP.repository.IDoctorRepo;
+import com.geekster.DoctorAPP.model.dto.AuthenticationInputDto;
+import com.geekster.DoctorAPP.model.dto.SignInInputDto;
+import com.geekster.DoctorAPP.model.enums.BloopGroup;
 import com.geekster.DoctorAPP.repository.IPatientRepo;
 import com.geekster.DoctorAPP.service.utility.emailUtility.EmailHandler;
 import com.geekster.DoctorAPP.service.utility.hashingUtility.PasswordEncrypter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 @Service
 public class PatientService {
-
-
     @Autowired
     IPatientRepo patientRepo;
 
-    @Autowired
-    IDoctorRepo doctorRepo;
 
     @Autowired
-    IAuthTokenRepo authTokenRepo;
+    PTokenService pTokenService;
 
-    @Autowired
-    AppointmentService appointmentService;
+    public String patientSignUp(Patient patient) {
 
-    public SignUpOutput signUpPatient(Patient patient) {
-
-        boolean signUpStatus = true;
-        String signUpStatusMessage = null;
+        //check if already exist -> Not allowed : try logging in
 
         String newEmail = patient.getPatientEmail();
 
-        if(newEmail == null)
-        {
-            signUpStatusMessage = "Invalid email";
-            signUpStatus = false;
-            return new SignUpOutput(signUpStatus,signUpStatusMessage);
-        }
-
-        //check if this patient email already exists ??
         Patient existingPatient = patientRepo.findFirstByPatientEmail(newEmail);
 
         if(existingPatient != null)
         {
-            signUpStatusMessage = "Email already registered!!!";
-            signUpStatus = false;
-            return new SignUpOutput(signUpStatus,signUpStatusMessage);
+            return "email already in use";
         }
 
-        //hash the password: encrypt the password
-        try {
-            String encryptedPassword = PasswordEncrypter.encryptPassword(patient.getPatientPassword());
+        // passwords are encrypted before we store it in the table
 
-            //saveAppointment the patient with the new encrypted password
+        String signUpPassword = patient.getPatientPassword();
+
+        try {
+            String encryptedPassword = PasswordEncrypter.encrypt(signUpPassword);
 
             patient.setPatientPassword(encryptedPassword);
+
+
+            // patient table - save patient
             patientRepo.save(patient);
+            return "patient registered";
 
-            return new SignUpOutput(signUpStatus, "Patient registered successfully!!!");
+        } catch (NoSuchAlgorithmException e) {
+
+            return "Internal Server issues while saving password, try again later!!!";
         }
-        catch(Exception e)
-        {
-            signUpStatusMessage = "Internal error occurred during sign up";
-            signUpStatus = false;
-            return new SignUpOutput(signUpStatus,signUpStatusMessage);
-        }
+
     }
 
-    public List<Patient> getAllPatients() {
-        return patientRepo.findAll();
-    }
+    public String patientSignIn(SignInInputDto signInInput) {
 
+        //check if the email is there in your tables
+        //sign in only possible if this person ever signed up
 
-    public String signInPatient(SignInInput signInInput) {
+        String email = signInInput.getEmail();
 
-
-        String signInStatusMessage = null;
-
-        String signInEmail = signInInput.getEmail();
-
-        if(signInEmail == null)
-        {
-            signInStatusMessage = "Invalid email";
-            return signInStatusMessage;
-
-
-        }
-
-        //check if this patient email already exists ??
-        Patient existingPatient = patientRepo.findFirstByPatientEmail(signInEmail);
+        Patient existingPatient = patientRepo.findFirstByPatientEmail(email);
 
         if(existingPatient == null)
         {
-            signInStatusMessage = "Email not registered!!!";
-            return signInStatusMessage;
-
+            return "Not a valid email, Please sign up first !!!";
         }
 
-        //match passwords :
+        //password should be matched
 
-        //hash the password: encrypt the password
+        String password = signInInput.getPassword();
+
         try {
-            String encryptedPassword = PasswordEncrypter.encryptPassword(signInInput.getPassword());
+            String encryptedPassword = PasswordEncrypter.encrypt(password);
+
             if(existingPatient.getPatientPassword().equals(encryptedPassword))
             {
-                //session should be created since password matched and user id is valid
-                AuthenticationToken authToken  = new AuthenticationToken(existingPatient);
-                authTokenRepo.save(authToken);
+                // return a token for this sign in
+                AuthenticationToken token  = new AuthenticationToken(existingPatient);
 
-                EmailHandler.sendEmail(signInEmail,"email testing",authToken.getTokenValue());
-                return "Token sent to your email";
+                if(EmailHandler.sendEmail(email,"otp after login", token.getTokenValue())) {
+                    pTokenService.createToken(token);
+                    return "check email for otp/token!!!";
+                }
+                else {
+                    return "error while generating token!!!";
+                }
+
             }
             else {
-                signInStatusMessage = "Invalid credentials!!!";
-                return signInStatusMessage;
+                //password was wrong!!!
+                return "Invalid Credentials!!!";
             }
+
+        } catch (NoSuchAlgorithmException e) {
+
+            return "Internal Server issues while saving password, try again later!!!";
         }
-        catch(Exception e)
-        {
-            signInStatusMessage = "Internal error occurred during sign in";
-            return signInStatusMessage;
-        }
+
 
     }
 
-    //todo : create sign out on your own
+    public String patientSignOut(AuthenticationInputDto authInfo) {
 
-    public boolean scheduleAppointment(Appointment appointment) {
-        //id of doctor
-        Long doctorId = appointment.getDoctor().getDoctorId();
-        boolean isDoctorValid = doctorRepo.existsById(doctorId);
-
-        //id of patient
-        Long patientId = appointment.getPatient().getPatientId();
-        boolean isPatientValid = patientRepo.existsById(patientId);
-
-        if(isDoctorValid && isPatientValid)
-        {
-            appointmentService.saveAppointment(appointment);
-            return true;
+        if(pTokenService.authenticate(authInfo)) {
+            String tokenValue = authInfo.getTokenValue();
+            pTokenService.deleteToken(tokenValue);
+            return "Sign Out successful!!";
         }
         else {
-            return false;
+            return "Un Authenticated access!!!";
         }
-    }
-
-    public void cancelAppointment(String email) {
-
-        //email -> Patient
-        Patient patient = patientRepo.findFirstByPatientEmail(email);
-
-        Appointment appointment = appointmentService.getAppointmentForPatient(patient);
-
-        appointmentService.cancelAppointment(appointment);
-
-
 
     }
 
-    public String sigOutPatient(String email) {
+    public List<Patient> getAllPatients() {
 
-        Patient patient = patientRepo.findFirstByPatientEmail(email);
-        authTokenRepo.delete(authTokenRepo.findFirstByPatient(patient));
-        return "Patient Signed out successfully";
+        return patientRepo.findAll();
+    }
+
+    public List<Patient> getAllPatientsByBloodGroup(BloopGroup bloodGroup) {
+
+        List<Patient> patients = patientRepo.findByPatientBloodGroup(bloodGroup);
+
+        for(Patient patient: patients)
+        {
+            patient.setAppointments(null);
+        }
+
+        return patients;
     }
 }

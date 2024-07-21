@@ -1,12 +1,15 @@
 package com.geekster.DoctorAPP.controller;
 
 
-import com.geekster.DoctorAPP.model.Appointment;
 import com.geekster.DoctorAPP.model.Doctor;
 import com.geekster.DoctorAPP.model.Patient;
-import com.geekster.DoctorAPP.model.dto.SignInInput;
-import com.geekster.DoctorAPP.model.dto.SignUpOutput;
-import com.geekster.DoctorAPP.service.AuthenticationService;
+import com.geekster.DoctorAPP.model.dto.AuthenticationInputDto;
+import com.geekster.DoctorAPP.model.dto.ScheduleAppointmentDTO;
+import com.geekster.DoctorAPP.model.dto.SignInInputDto;
+import com.geekster.DoctorAPP.model.enums.Qualification;
+import com.geekster.DoctorAPP.model.enums.Specialization;
+import com.geekster.DoctorAPP.service.AppointmentService;
+import com.geekster.DoctorAPP.service.DoctorService;
 import com.geekster.DoctorAPP.service.PatientService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,71 +21,60 @@ import java.util.List;
 @Validated
 @RestController
 public class PatientController {
-
     @Autowired
     PatientService patientService;
 
     @Autowired
-    AuthenticationService authenticationService;
+    AppointmentService appointmentService;
+
+    @Autowired
+    DoctorService doctorService;
 
 
-
+    //sign up
     @PostMapping("patient/signup")
-    public SignUpOutput signUpPatient(@RequestBody Patient patient)
+    public String patientSignUp(@Valid @RequestBody Patient patient)
     {
-
-        return patientService.signUpPatient(patient);
+        return patientService.patientSignUp(patient);
     }
 
+
+
+    //sign in
     @PostMapping("patient/signIn")
-    public String sigInPatient(@RequestBody @Valid SignInInput signInInput)
+    public String patientSignIn(@RequestBody SignInInputDto signInInput)
     {
-        return patientService.signInPatient(signInInput);
+        return patientService.patientSignIn(signInInput);
     }
 
+
+    //sign out
     @DeleteMapping("patient/signOut")
-    public String sigOutPatient(String email, String token)
+    public String patientSignOut(@RequestBody AuthenticationInputDto authInfo)
     {
-        if(authenticationService.authenticate(email,token)) {
-            return patientService.sigOutPatient(email);
-        }
-        else {
-            return "Sign out not allowed for non authenticated user.";
-        }
-
+        return patientService.patientSignOut(authInfo);
     }
 
-    @GetMapping("patients")
-    List<Patient> getAllPatients()
+
+    //schedule an appointment
+
+    @PostMapping("patient/appointment/schedule")
+    public String scheduleAppointment(@RequestBody ScheduleAppointmentDTO scheduleAppointmentDTO)
     {
-        return patientService.getAllPatients();
+        return appointmentService.scheduleAppointment(scheduleAppointmentDTO.getAuthInfo(),scheduleAppointmentDTO.getAppointment());
     }
 
-    @PostMapping("appointment/schedule")
-    public String  scheduleAppointment(@RequestBody Appointment appointment,String email, String token)
+    @DeleteMapping("patient/appointment/{appointmentId}/cancel")
+    public String cancelAppointment(@RequestBody AuthenticationInputDto authInfo, @PathVariable Long appointmentId)
     {
-
-        if(authenticationService.authenticate(email,token)) {
-            boolean status = patientService.scheduleAppointment(appointment);
-            return status ? "appointment scheduled":"error occurred during scheduling appointment";
-        }
-        else
-        {
-            return "Scheduling failed because invalid authentication";
-        }
+        return appointmentService.cancelAppointment(authInfo,appointmentId);
     }
 
-    @DeleteMapping("appointment/cancel")
-    public String  cancelAppointment(String email, String token)
+    @GetMapping("doctors/qualification/{qual}/or/specialization/{spec}")
+    public List<Doctor> getDoctorsByQualificationOrSpec(@RequestBody AuthenticationInputDto authInfo, @PathVariable Qualification qual, @PathVariable Specialization spec)
     {
-
-        if(authenticationService.authenticate(email,token)) {
-            patientService.cancelAppointment(email);
-            return "canceled Appointment successfully";
-        }
-        else
-        {
-            return "Scheduling failed because invalid authentication";
-        }
+        return doctorService.getDoctorsByQualificationOrSpec(authInfo,qual,spec);
     }
+
+
 }

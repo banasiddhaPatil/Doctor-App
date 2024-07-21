@@ -2,13 +2,12 @@ package com.geekster.DoctorAPP.controller;
 
 
 import com.geekster.DoctorAPP.model.Doctor;
+import com.geekster.DoctorAPP.model.dto.AuthenticationInputDto;
 import com.geekster.DoctorAPP.service.DoctorService;
 import com.geekster.DoctorAPP.service.PatientService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -18,17 +17,19 @@ public class DoctorController {
     @Autowired
     DoctorService doctorService;
 
-    @PostMapping("doctor")
-    void addDoctor(@RequestBody Doctor doc)
+    @GetMapping("doctors")
+    public List<Doctor> getAllDoctors(@Valid @RequestBody AuthenticationInputDto authInfo)
     {
-        doctorService.addDoctor(doc);
+        return doctorService.getAllDoctors(authInfo);
     }
 
-    @GetMapping("doctors")
-    List<Doctor> getAllDoctors()
+
+    @GetMapping("doctor/{id}")
+    public Doctor getDoctorById(@PathVariable Long id)
     {
-        return doctorService.getAllDoctors();
+        return doctorService.getDoctorById(id);
     }
+
 
 
 

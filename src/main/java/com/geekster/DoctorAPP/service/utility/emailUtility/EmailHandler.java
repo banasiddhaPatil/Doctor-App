@@ -7,11 +7,11 @@ import java.util.Properties;
 
 public class EmailHandler {
 
-    private static final String EMAIL_USERNAME ="mainakgh1@gmail.com";
-    private static final String EMAIL_PASSWORD ="iyyjxbrjqvchtdhv";
 
+    private static final String EMAIL_USERNAME = "mainakgh1@gmail.com";
+    private static final String EMAIL_PASSWORD = "eige yneu huem bhzz";
 
-    public static void sendEmail(String toEmail, String subject, String body) throws MessagingException {
+    public static boolean sendEmail(String toEmail, String subject, String body){
         Properties properties = new Properties();
         properties.put("mail.smtp.auth", "true");
         properties.put("mail.smtp.starttls.enable", "true");
@@ -33,8 +33,10 @@ public class EmailHandler {
             message.setText(body);
             Transport.send(message);
             System.out.println("OTP sent successfully to " + toEmail);
+            return true;
         } catch (MessagingException e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

@@ -33,4 +33,13 @@ public class Appointment {
     @ManyToOne
     @JoinColumn(name = "fk_doctor_id")
     Doctor doctor;
+
+    public void setAppCreationTime(LocalDateTime now) {
+    }
+
+    public String getAppScheduleTime() {
+     return "Appointment shedule please check the mail ";
+    }
+
+
 }
